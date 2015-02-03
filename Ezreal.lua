@@ -1,11 +1,26 @@
 if myHero.charName ~= "Ezreal" then return end
 
+function auth()
+  a1 = GetWebResult('raw.github.com','sky6803469/BOL-script/master/Auth.txt')
+  if string.find(a1,"dk15877"or"sky6803469"or"ydxl123") then 
+		return true
+	end
+  if string.find(a1,GetUser()) then 
+	return true 
+	else  
+	print ("auth false")
+	return false
+	end
+end
+
+if not auth() then return end
+
 --[[The only think where you are allowed to change smth]]--
-local AllowAutoUpdate = true
+local AllowAutoUpdate = false
 --[[ends here!]]--
 
 -------Auto update-------
-local CurVer = 0.2
+local CurVer = 0.3
 local NetVersion = nil
 local NeedUpdate = false
 local Do_Once = true
@@ -129,19 +144,13 @@ end
 
 
 --[OnLoad]--
-function OnLoad()	
-	starttick = GetTickCount()
-	_loadP()
-	_loadSOW()
-	_load_menu()
-	_initiateTS()
-	MyBasicRange = myHero.range + (GetDistance(myHero.minBBox) - 3)
-	PrintChat("<font color='#40FF00'> >> "..ScriptName.." v."..CurVer.." - loaded</font>")
-end
+
+
 
 
 function _loadP()
 	if prodicfile then
+		require("Prodiction")
 		Prodiction = ProdictManager.GetInstance()
 		ProdictionQ = Prodiction:AddProdictionObject(_Q, Qrange, Qspeed, Qdelay, Qwidth) 
 		ProdictionW = Prodiction:AddProdictionObject(_W, Wrange, Wspeed, Wdelay, Wwidth) 
@@ -170,7 +179,8 @@ end
 
 function _loadSOW()
 if not sowfile or not vpredicfile then return end
-   SOW = SOW(VP)
+	VP = VPrediction()
+    SOW = SOW(VP)
    SOW:LoadToMenu()  
 end
 
@@ -287,7 +297,7 @@ function _load_menu()
 		
 		
 		-----------------------------------------------------------------------------------------------------
-		Menu:addSubMenu("Target acquisition", "ta")	
+		Menu:addSubMenu("预判选择", "ta")	
 			if not VIP_USER then
 				Menu.ta:addParam("co", "Use", SCRIPT_PARAM_LIST, 1, {"FREEPrediction"})
 			end
@@ -311,9 +321,9 @@ function _load_menu()
 
 		-----------------------------------------------------------------------------------------------------
 		Menu:addSubMenu("高级设置", "extra")
-			Menu.extra:addSubMenu("Extended", "ex")
+			Menu.extra:addSubMenu("高级设置", "ex")
 				if VIP_USER then
-					Menu.extra.ex:addParam("packetcast", "释放模式", SCRIPT_PARAM_LIST, 1, { "正常", "不能用", "不能用" })
+					Menu.extra.ex:addParam("packetcast", "使用模式", SCRIPT_PARAM_LIST, 1, { "正常", "不能用", "Packets" })
 				else
 					Menu.extra.ex:addParam("packetcast", "Casting", SCRIPT_PARAM_LIST, 1, {"Regular"})
 				end
@@ -331,7 +341,7 @@ function _load_menu()
 		-----------------------------------------------------------------------------------------------------				
 			Menu:addSubMenu("技能设置", "specl")
 		
-				Menu.specl:addSubMenu("Q", "qopt")
+				Menu.specl:addSubMenu("Q技能设置", "qopt")
 					Menu.specl.qopt:addParam("qts", "Q目标", SCRIPT_PARAM_LIST, 1, { "智能选择", "只对选择目标使用" })
 					
 				
@@ -341,7 +351,7 @@ function _load_menu()
 					
 				Menu.specl:addSubMenu("E-Options", "eopt")
 					Menu.specl.eopt:addParam("ets", "E Target", SCRIPT_PARAM_LIST, 1, { "MainTarget", "E-TargetSelector" })
-					Menu.specl.eopt:addParam("eopt1", "使用E", SCRIPT_PARAM_LIST, 1, { "ToMouse", "ToMainTarget" })
+					Menu.specl.eopt:addParam("eopt1", "使用E", SCRIPT_PARAM_LIST, 1, { "鼠标方向", "目标方向" })
 
 				Menu.specl:addSubMenu("R-Options", "ropt")
 					Menu.specl.ropt:addParam("rts", "R Target", SCRIPT_PARAM_LIST, 1, { "MainTarget", "R-TargetSelector" })
@@ -352,13 +362,17 @@ function _load_menu()
 					Menu.specl.ropt:addParam("finish", "Assisted Ult Key:", SCRIPT_PARAM_ONKEYDOWN, false, string.byte("R"))
 					Menu.specl.ropt:addParam("finishrange", "R on lowest Enemy in Range:",  SCRIPT_PARAM_SLICE, 500, 0, 3000, 0)
 		-----------------------------------------------------------------------------------------------------
-		
+		Menu:addSubMenu("终结敌人","killsteal")
+			Menu.killsteal:addParam("KSEnable", "打开抢人头", SCRIPT_PARAM_ONOFF, true)
+			Menu.killsteal:addParam("KSOverride", "无论如何都要抢", SCRIPT_PARAM_ONOFF, true)
+			Menu.killsteal:addParam("sep", "用什么招数", SCRIPT_PARAM_INFO, "")
+			Menu.killsteal:addParam("Q", "用Q吗?", SCRIPT_PARAM_ONOFF, true)
+			Menu.killsteal:addParam("W", "用W吗?", SCRIPT_PARAM_ONOFF, true)
+			Menu.killsteal:addParam("R", "一定要用R吧!", SCRIPT_PARAM_ONOFF, true)
+			Menu.killsteal:addParam("sep", "你还要啥功能和我说!", SCRIPT_PARAM_INFO, "")
+
 		
 		-----------------------------------------------------------------------------------------------------		
-		Menu:addParam("info", " >> created by R&M", SCRIPT_PARAM_INFO, "")
-		Menu:addParam("info2", " >> Version "..CurVer, SCRIPT_PARAM_INFO, "")
-		-----------------------------------------------------------------------------------------------------
-		
 		
 		_setimpdef()
 end
@@ -371,7 +385,6 @@ function _setimpdef()
 	Menu.keys.permhrs = false
 	Menu.keys.okdhrs = false
 end
-
 
 function _initiateTS()
 	MyMinionManager = minionManager(MINION_ENEMY, 50000)
@@ -393,8 +406,19 @@ function _initiateTS()
 	Menu.specl.ropt:addTS(rts)
 
 end
---[/OnLoad]--
 
+function OnLoad()	
+	_load_menu()
+	-- _loadP()
+	starttick = GetTickCount()
+	_loadSOW()
+	_initiateTS()
+	_loadP()
+	MyBasicRange = myHero.range + (GetDistance(myHero.minBBox) - 3)
+	print("<font color=\"#00fa9a\"><b>&#x6B64;&#x811A;&#x672C;&#x7531;&#x8FDB;&#x51FB;&#x7684;Moon&#x4E36;&#x4E3A;&#x4F60;&#x5E26;&#x6765;,&#x4EAB;&#x53D7;&#x6E38;&#x620F;&#x4EAB;&#x53D7;&#x751F;&#x6D3B;.<b></font>")
+    print("<font color=\"#00fa9a\"><b>&#x611F;&#x8C22;R&#x4FEE;&#x590D;&#x5E76;&#x5B8C;&#x5584;&#x6B64;&#x811A;&#x672C;,&#x6C49;&#x5316;ByMoon&#x4E36;.<b></font>")
+end
+--[/OnLoad]--
 
 --[[OnDraw]]--
 function OnDraw()
@@ -495,6 +519,61 @@ function _dmg(spell, target)
 	elseif Menu.draw.prdraw.visu == 2 then
 		return math.round(((getDmg(spell, target, myHero) / target.maxHealth) * 100))
 	end	
+end
+
+function KillSteal()
+	for i = 1, heroManager.iCount do
+	local enemy = heroManager:getHero(i)
+	local Menu1 = Menu.killsteal
+		if QReady and Menu1.Q and ValidTarget(enemy, Qrange) and enemy.health < getDmg("Q",enemy,myHero) and myHero.mana >= ManaCost(Q) then
+			CastVPredQ(enemy) 
+		end
+		if WReady and Menu1.W and ValidTarget(enemy, Wrange) and enemy.health < getDmg("W",enemy,myHero) and myHero.mana >= ManaCost(W) then
+			CastVPredW(enemy)
+		end
+		if RReady and Menu1.R and ValidTarget(enemy, Rrange) and enemy.health < getDmg("R",enemy,myHero) + 60 and myHero.mana >= ManaCost(R) then
+			CastVPredR(enemy)
+		end
+	end
+end
+
+function CastVPredQ(unit)
+	if QReady and ValidTarget(unit) and myHero.mana >= ManaCost(Q) then
+		local CastPosition, HitChance, Position = VP:GetLineCastPosition(unit, Qdelay, Qwidth, Qrange, Qspeed, myHero, true)
+		if HitChance >= minVPhit and GetDistance(CastPosition) <= Qrange then
+			_castSpell(_Q, CastPosition.x,CastPosition.z, nil)	
+		end
+	end
+end
+
+function CastVPredW(unit)
+	if WReady and ValidTarget(unit) and myHero.mana >= ManaCost(W) then
+		local CastPosition, HitChance, Position = VP:GetLineCastPosition(unit, Wdelay, Wwidth, Wrange, Wspeed, myHero, false)
+		if HitChance >= minVPhit and GetDistance(unit) <= Wrange then
+			_castSpell(_W, CastPosition.x,CastPosition.z, nil)
+		end
+	end
+end
+
+function CastVPredR(unit)
+	if RReady and ValidTarget(unit) and myHero.mana >= ManaCost(R) then
+		local CastPosition, HitChance, Position = VP:GetLineCastPosition(unit, Rdelay, Rwidth, Rrange, Rspeed, myHero, false)
+		if HitChance >= minVPhit and GetDistance(CastPosition) <= Rrange then
+			_castSpell(_R, CastPosition.x,CastPosition.z, nil)
+		end
+	end
+end
+
+function ManaCost(spell)
+	if spell == Q then
+		return 25 + (3 * myHero:GetSpellData(_Q).level)
+	elseif spell == W then
+		return 40 + (10 * myHero:GetSpellData(_W).level)
+	elseif spell == E then
+		return 90
+	elseif spell == R then
+		return 100
+	end
 end
 
 function GetHPBarPos(enemy)
@@ -608,6 +687,9 @@ end
 
 
 function _smartcore()
+
+if Menu.killsteal.KSEnable then KillSteal() end
+
 	_finishR()
 if (Menu.keys.permrota or Menu.keys.okdrota) then
 			if Menu.rota.useQ and canQrota and QReady then
@@ -627,6 +709,17 @@ if (Menu.keys.permrota or Menu.keys.okdrota) then
 			end
 end
 
+function OnProcessSpell(unit, spell)
+	-- if unit.isMe and spell.name:lower():find("attack") then
+		-- SpellTarget = spell.target
+		-- DelayAction(function() cast_pred_w() end, 0.3)
+	-- end
+	if unit.isMe and spell.name:lower():find("ezrealmysticshot") then 
+		if okdrota and Menu.rota.useW and canWrota and WReady then 
+			DelayAction(function() cast_pred_w() end, spell.windUpTime+0.8)
+		end
+	end
+end
 
 if (Menu.keys.permhrs or Menu.keys.okdhrs) then	
 			if Menu.harrass.autohrsQ and canQhrs and QReady then				
@@ -706,7 +799,10 @@ Menu.ta.co=3
 		end
 	end	
 	if main_cast_pos ~= nil and QReady then			
-		_castSpell(_Q, main_cast_pos.x, main_cast_pos.z, nil)	
+		_castSpell(_Q, main_cast_pos.x, main_cast_pos.z, nil)
+		if not QTAR.dead then 
+			myHero:Attack(QTAR)
+		end
 	end	
 end
 
@@ -718,6 +814,7 @@ if Menu.specl.wopt.wts == 1 then
 elseif Menu.specl.wopt.wts == 2 then
 	WTAR = wts.target
 end
+Menu.ta.co=3
 local main_cast_pos = nil
 	if Menu.ta.co == 1 then
 		if WTAR ~=nil and WTAR.visible and GetDistance(WTAR) < Wrange then
@@ -752,6 +849,9 @@ local main_cast_pos = nil
 	end	
 	if main_cast_pos ~= nil and WReady then		
 		_castSpell(_W, main_cast_pos.x, main_cast_pos.z, nil)	
+		if not WTAR.dead then 
+			myHero:Attack(WTAR)
+		end
 	end
 end
 
@@ -787,6 +887,7 @@ if Menu.specl.ropt.rts == 1 then
 elseif Menu.specl.ropt.rts == 2 then
 	RTAR = rts.target
 end
+Menu.ta.co=3
 	if Menu.ta.co == 1 then
 		if RTAR ~=nil and RTAR.visible and GetDistance(RTAR) < Rrange then
 			local Position = FreePredictionR:GetPrediction(RTAR)
@@ -1253,7 +1354,7 @@ local cansend = false
 		end
 	end
 	if cansend then
-		Packet("S_Cast", {spellId = mySpell,fromxX = myHero.x, fromY = myHero.z,toX=ptosX,toY=tposZ}):send()
+		Packet("S_Cast", {spellId = mySpell,fromxX = ptosX, fromY =ptosZ,toX=ptosX,toY=tposZ}):send()
 	end
 	if not cansend then print("<font color='#F72828'>[CSOP][ERROR]Invalid Operator</font>") end
 end
